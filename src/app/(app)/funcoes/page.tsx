@@ -5,10 +5,106 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError } from "@/lib/api";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/lib/utils";
 import type { Funcao } from "@/types";
-import { Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, Plus, Trash2 } from "lucide-react";
+
+// ── Modal: nova função ────────────────────────────────────────────────────────
+
+function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [padrao, setPadrao] = useState(false);
+  const [ordem, setOrdem] = useState(0);
+  const [error, setError] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      api.post("/funcoes", {
+        nome,
+        descricao: descricao || null,
+        padrao,
+        ordem,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["funcoes"] });
+      onClose();
+    },
+    onError: (err) => setError(getApiError(err)),
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="mb-5 text-lg font-semibold text-gray-900">Nova função litúrgica</h2>
+
+        <div className="flex flex-col gap-4">
+          <Input
+            label="Nome"
+            value={nome}
+            onChange={(e) => { setNome(e.target.value); setError(""); }}
+            placeholder="Ex: Mestre de Cerimônias"
+            required
+          />
+
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Descrição <span className="font-normal text-gray-400">(opcional)</span>
+            </label>
+            <textarea
+              value={descricao}
+              onChange={(e) => { setDescricao(e.target.value); setError(""); }}
+              placeholder="Breve descrição da função..."
+              rows={2}
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-1 flex-1">
+              <label className="text-sm font-medium text-gray-700">Ordem de exibição</label>
+              <input
+                type="number"
+                value={ordem}
+                onChange={(e) => setOrdem(Number(e.target.value))}
+                min={0}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+            </div>
+
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 select-none pt-5">
+              <input
+                type="checkbox"
+                checked={padrao}
+                onChange={(e) => setPadrao(e.target.checked)}
+                className="rounded"
+              />
+              Padrão em dominicais
+            </label>
+          </div>
+        </div>
+
+        {error && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+        )}
+
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button
+            loading={mutation.isPending}
+            disabled={!nome.trim()}
+            onClick={() => mutation.mutate()}
+          >
+            Criar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Linha editável ────────────────────────────────────────────────────────────
 
@@ -21,7 +117,7 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
   const [ordem, setOrdem] = useState(funcao.ordem);
   const [error, setError] = useState("");
 
-  const mutation = useMutation({
+  const editMutation = useMutation({
     mutationFn: () =>
       api.patch(`/funcoes/${funcao.id}`, {
         nome: nome || undefined,
@@ -40,6 +136,13 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
   const toggleAtivoMutation = useMutation({
     mutationFn: () => api.patch(`/funcoes/${funcao.id}`, { ativo: !funcao.ativo }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["funcoes"] }),
+    onError: (err) => setError(getApiError(err)),
+  });
+
+  const excluirMutation = useMutation({
+    mutationFn: () => api.delete(`/funcoes/${funcao.id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["funcoes"] }),
+    onError: (err) => setError(getApiError(err)),
   });
 
   function cancelar() {
@@ -58,26 +161,24 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
       editing ? "border-blue-300" : "border-gray-200",
     )}>
       {editing ? (
-        // ── modo edição ──
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <span className="w-24 shrink-0 rounded bg-gray-100 px-2 py-1 text-center text-xs font-mono font-semibold text-gray-600">
-              {funcao.codigo}
-            </span>
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               placeholder="Nome da função"
             />
-            <input
-              type="number"
-              value={ordem}
-              onChange={(e) => setOrdem(Number(e.target.value))}
-              className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-sm focus:border-blue-500 focus:outline-none"
-              placeholder="Ordem"
-              min={0}
-            />
+            <div className="flex items-center gap-1.5 shrink-0">
+              <label className="text-xs text-gray-500">Ordem</label>
+              <input
+                type="number"
+                value={ordem}
+                onChange={(e) => setOrdem(Number(e.target.value))}
+                className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-sm focus:border-blue-500 focus:outline-none"
+                min={0}
+              />
+            </div>
           </div>
 
           <input
@@ -103,32 +204,25 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
             <Button size="sm" variant="ghost" onClick={cancelar}>
               <X className="h-4 w-4" /> Cancelar
             </Button>
-            <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>
+            <Button size="sm" loading={editMutation.isPending} onClick={() => editMutation.mutate()}>
               <Check className="h-4 w-4" /> Salvar
             </Button>
           </div>
         </div>
       ) : (
-        // ── modo leitura ──
         <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="w-24 shrink-0 rounded bg-gray-100 px-2 py-1 text-center text-xs font-mono font-semibold text-gray-600">
-              {funcao.codigo}
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className="font-medium text-gray-900">{funcao.nome}</p>
-                {funcao.padrao && <Badge variant="blue">Padrão</Badge>}
-                {!funcao.ativo && <Badge variant="red">Inativa</Badge>}
-              </div>
-              {funcao.descricao && (
-                <p className="text-xs text-gray-400 truncate">{funcao.descricao}</p>
-              )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-medium text-gray-900">{funcao.nome}</p>
+              {funcao.padrao && <Badge variant="blue">Padrão</Badge>}
+              {!funcao.ativo && <Badge variant="red">Inativa</Badge>}
             </div>
+            {funcao.descricao && (
+              <p className="text-xs text-gray-400 truncate mt-0.5">{funcao.descricao}</p>
+            )}
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs text-gray-400">#{funcao.ordem}</span>
             <Button
               size="sm"
               variant={funcao.ativo ? "secondary" : "ghost"}
@@ -140,8 +234,24 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
             <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
               <Pencil className="h-4 w-4" />
             </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={excluirMutation.isPending}
+              onClick={() => {
+                if (confirm(`Excluir "${funcao.nome}"? Esta ação não pode ser desfeita.`)) {
+                  excluirMutation.mutate();
+                }
+              }}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
           </div>
         </div>
+      )}
+      {!editing && error && (
+        <p className="mt-2 text-xs text-red-600">{error}</p>
       )}
     </div>
   );
@@ -151,6 +261,7 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
 
 export default function FuncoesPage() {
   const [incluirInativas, setIncluirInativas] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const { data: funcoes, isLoading } = useQuery({
     queryKey: ["funcoes", incluirInativas],
@@ -168,23 +279,33 @@ export default function FuncoesPage() {
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Funções litúrgicas</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            Edite nome, descrição, ordem e se a função é padrão nas missas.
+            Gerencie as funções que podem ser atribuídas nas escalas.
           </p>
         </div>
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 select-none">
-          <input
-            type="checkbox"
-            checked={incluirInativas}
-            onChange={(e) => setIncluirInativas(e.target.checked)}
-            className="rounded"
-          />
-          Incluir inativas
-        </label>
+        <div className="flex items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 select-none">
+            <input
+              type="checkbox"
+              checked={incluirInativas}
+              onChange={(e) => setIncluirInativas(e.target.checked)}
+              className="rounded"
+            />
+            Inativas
+          </label>
+          <Button size="sm" onClick={() => setShowModal(true)}>
+            <Plus className="h-4 w-4" />
+            Nova função
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner />
+        </div>
+      ) : (funcoes ?? []).length === 0 ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
+          Nenhuma função encontrada.
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -193,6 +314,8 @@ export default function FuncoesPage() {
           ))}
         </div>
       )}
+
+      {showModal && <NovaFuncaoModal onClose={() => setShowModal(false)} />}
     </div>
   );
 }

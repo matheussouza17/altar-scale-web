@@ -11,8 +11,6 @@ import { formatarData, formatarHorario } from "@/lib/utils";
 import type { Funcao, Missa, ServidorDisponivel } from "@/types";
 import { ArrowLeft, Copy, Check, X, UserPlus, SlidersHorizontal } from "lucide-react";
 
-// ── Modal: gerenciar funções da missa ────────────────────────────────────────
-
 function GerenciarFuncoesModal({
   missa,
   onClose,
@@ -53,17 +51,15 @@ function GerenciarFuncoesModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
         <h2 className="mb-1 text-lg font-semibold text-gray-900">Funções desta missa</h2>
-        <p className="mb-4 text-sm text-gray-500">
-          Marque quais funções estarão ativas nesta celebração.
-        </p>
+        <p className="mb-4 text-sm text-gray-500">Marque quais funções estarão ativas.</p>
 
         {isLoading ? (
           <div className="flex justify-center py-6"><Spinner /></div>
         ) : (
-          <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
             {(todasFuncoes ?? []).map((f) => {
               const checked = selecionadas.has(f.id);
               const temEscala = missa.escalas?.some((e) => e.funcaoId === f.id);
@@ -81,10 +77,9 @@ function GerenciarFuncoesModal({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{f.nome}</p>
                     {temEscala && !checked && (
-                      <p className="text-xs text-amber-600">Há servidores escalados — serão removidos</p>
+                      <p className="text-xs text-amber-600">Escalados serão removidos</p>
                     )}
                   </div>
-                  <span className="text-xs font-mono text-gray-400">{f.codigo}</span>
                 </label>
               );
             })}
@@ -97,16 +92,12 @@ function GerenciarFuncoesModal({
 
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button loading={mutation.isPending} onClick={() => mutation.mutate()}>
-            Salvar
-          </Button>
+          <Button loading={mutation.isPending} onClick={() => mutation.mutate()}>Salvar</Button>
         </div>
       </div>
     </div>
   );
 }
-
-// ── Componente: adicionar servidor a uma função ──────────────────────────────
 
 function AdicionarServidor({
   missaId,
@@ -145,35 +136,41 @@ function AdicionarServidor({
       ) : !data?.servidores.length ? (
         <p className="text-sm text-gray-500">Nenhum servidor disponível para este horário.</p>
       ) : (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <select
             value={userId}
             onChange={(e) => { setUserId(e.target.value); setError(""); }}
-            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           >
             <option value="">Selecionar servidor...</option>
             {data.servidores.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.nome}
                 {s.funcoesNaMissa.length > 0 &&
-                  ` (já em: ${s.funcoesNaMissa.map((f) => f.codigo).join(", ")})`}
+                  ` (${s.funcoesNaMissa.map((f) => f.codigo).join(", ")})`}
               </option>
             ))}
           </select>
-          <Button size="sm" disabled={!userId} loading={mutation.isPending} onClick={() => mutation.mutate()}>
-            Confirmar
-          </Button>
-          <Button size="sm" variant="ghost" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="flex-1 sm:flex-none"
+              disabled={!userId}
+              loading={mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              Confirmar
+            </Button>
+            <Button size="sm" variant="ghost" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
-
-// ── Página principal ─────────────────────────────────────────────────────────
 
 export default function MissaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -238,26 +235,26 @@ export default function MissaDetailPage() {
   const publicada = !!missa.publicadaEm;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       {/* Cabeçalho */}
-      <div className="mb-6 flex items-start gap-4">
-        <button onClick={() => router.back()} className="mt-0.5 text-gray-400 hover:text-gray-600 transition-colors">
+      <div className="mb-5 flex items-start gap-3">
+        <button onClick={() => router.back()} className="mt-0.5 text-gray-400 hover:text-gray-600 transition-colors shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900">
               {formatarData(missa.data)} · {formatarHorario(missa.horario)}
             </h1>
             {missa.tipo === "ESPECIAL" && <Badge variant="yellow">Especial</Badge>}
             {publicada ? <Badge variant="green">Publicada</Badge> : <Badge variant="gray">Rascunho</Badge>}
           </div>
-          {missa.titulo && <p className="mt-0.5 text-sm text-gray-500">{missa.titulo}</p>}
+          {missa.titulo && <p className="mt-0.5 text-sm text-gray-500 truncate">{missa.titulo}</p>}
         </div>
       </div>
 
       {/* Ações */}
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-5 flex flex-wrap gap-2">
         {publicada ? (
           <Button variant="secondary" size="sm" loading={despublicarMutation.isPending} onClick={() => despublicarMutation.mutate()}>
             Despublicar
@@ -274,7 +271,9 @@ export default function MissaDetailPage() {
           </Button>
         )}
         <Button variant="secondary" size="sm" onClick={handleExportar}>
-          {copied ? <><Check className="h-4 w-4 text-green-600" /> Copiado!</> : <><Copy className="h-4 w-4" /> Copiar para WhatsApp</>}
+          {copied
+            ? <><Check className="h-4 w-4 text-green-600" /> Copiado!</>
+            : <><Copy className="h-4 w-4" /> Copiar para WhatsApp</>}
         </Button>
       </div>
 
@@ -301,18 +300,22 @@ export default function MissaDetailPage() {
               const aberta = addingFuncao === mf.funcaoId;
 
               return (
-                <div key={mf.id} className="rounded-xl border border-gray-200 bg-white px-5 py-4">
-                  <div className="flex items-center justify-between">
-                    <div>
+                <div key={mf.id} className="rounded-xl border border-gray-200 bg-white px-4 py-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
                       <p className="font-medium text-gray-900">{mf.funcao.nome}</p>
                       <p className="text-xs text-gray-400">
                         {escalasNaFuncao.length}/{mf.quantidade} vaga{mf.quantidade !== 1 ? "s" : ""}
                       </p>
                     </div>
                     {escalasNaFuncao.length < mf.quantidade && !publicada && (
-                      <Button size="sm" variant="secondary" onClick={() => setAddingFuncao(aberta ? null : mf.funcaoId)}>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setAddingFuncao(aberta ? null : mf.funcaoId)}
+                      >
                         <UserPlus className="h-4 w-4" />
-                        Adicionar
+                        <span className="hidden sm:inline">Adicionar</span>
                       </Button>
                     )}
                   </div>
@@ -320,7 +323,10 @@ export default function MissaDetailPage() {
                   {escalasNaFuncao.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {escalasNaFuncao.map((e) => (
-                        <div key={e.id} className="flex items-center gap-1.5 rounded-full bg-gray-100 pl-3 pr-1.5 py-1 text-sm text-gray-800">
+                        <div
+                          key={e.id}
+                          className="flex items-center gap-1.5 rounded-full bg-gray-100 pl-3 pr-1.5 py-1 text-sm text-gray-800"
+                        >
                           {e.user.nome}
                           {!publicada && (
                             <button

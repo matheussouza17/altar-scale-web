@@ -12,8 +12,6 @@ import type { PapelUsuario, User } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { UserPlus, ChevronRight, Search } from "lucide-react";
 
-// ── Modal: criar usuário ──────────────────────────────────────────────────────
-
 function CriarServidorModal({ onClose }: { onClose: () => void }) {
   const { user: me } = useAuth();
   const qc = useQueryClient();
@@ -62,35 +60,10 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
               </select>
             </div>
           )}
-          <Input
-            label="Nome"
-            value={form.nome}
-            onChange={(e) => set("nome", e.target.value)}
-            placeholder="Nome completo"
-            required
-          />
-          <Input
-            label="E-mail"
-            type="email"
-            value={form.email}
-            onChange={(e) => set("email", e.target.value)}
-            placeholder="email@exemplo.com"
-            required
-          />
-          <Input
-            label="Senha temporária"
-            type="password"
-            value={form.senha}
-            onChange={(e) => set("senha", e.target.value)}
-            placeholder="Mínimo 8 caracteres"
-            required
-          />
-          <Input
-            label="Telefone (opcional)"
-            value={form.telefone}
-            onChange={(e) => set("telefone", e.target.value)}
-            placeholder="(62) 99999-9999"
-          />
+          <Input label="Nome" value={form.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Nome completo" required />
+          <Input label="E-mail" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="email@exemplo.com" required />
+          <Input label="Senha temporária" type="password" value={form.senha} onChange={(e) => set("senha", e.target.value)} placeholder="Mínimo 8 caracteres" required />
+          <Input label="Telefone (opcional)" value={form.telefone} onChange={(e) => set("telefone", e.target.value)} placeholder="(62) 99999-9999" />
         </div>
 
         {error && (
@@ -99,11 +72,7 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
 
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button
-            loading={mutation.isPending}
-            disabled={!form.nome || !form.email || !form.senha}
-            onClick={() => mutation.mutate()}
-          >
+          <Button loading={mutation.isPending} disabled={!form.nome || !form.email || !form.senha} onClick={() => mutation.mutate()}>
             Criar
           </Button>
         </div>
@@ -111,8 +80,6 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-// ── Página ────────────────────────────────────────────────────────────────────
 
 export default function ServidoresPage() {
   const qc = useQueryClient();
@@ -143,22 +110,23 @@ export default function ServidoresPage() {
   );
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Servidores</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-gray-500 hidden sm:block">
             Gerencie os servidores do altar.
           </p>
         </div>
         <Button size="sm" onClick={() => setShowModal(true)}>
           <UserPlus className="h-4 w-4" />
-          Novo servidor
+          <span className="hidden sm:inline">Novo servidor</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
       {/* Filtros */}
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
@@ -185,27 +153,27 @@ export default function ServidoresPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-          {search ? "Nenhum servidor encontrado para essa busca." : "Nenhum servidor cadastrado."}
+          {search ? "Nenhum servidor encontrado." : "Nenhum servidor cadastrado."}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
           {filtered.map((user) => (
             <div
               key={user.id}
-              className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-5 py-4"
+              className="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3"
             >
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-gray-900 truncate">{user.nome}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="font-medium text-gray-900 truncate text-sm">{user.nome}</p>
                   <Badge variant={user.papel === "COORDENADOR" ? "blue" : "gray"}>
-                    {user.papel === "COORDENADOR" ? "Coordenador" : "Servidor"}
+                    {user.papel === "COORDENADOR" ? "Coord." : "Servidor"}
                   </Badge>
                   {!user.ativo && <Badge variant="red">Inativo</Badge>}
                 </div>
                 <p className="text-xs text-gray-400 truncate">{user.email}</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Button
                   size="sm"
                   variant={user.ativo ? "secondary" : "ghost"}
@@ -221,7 +189,7 @@ export default function ServidoresPage() {
                 </Button>
                 <Link
                   href={`/servidores/${user.id}`}
-                  className="flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                  className="flex items-center text-gray-400 hover:text-gray-600 transition-colors p-1"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </Link>

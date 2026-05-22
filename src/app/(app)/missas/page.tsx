@@ -18,8 +18,6 @@ import type { Missa } from "@/types";
 import { cn } from "@/lib/utils";
 import { ChevronRight, Plus } from "lucide-react";
 
-// ── Modal: nova missa especial ────────────────────────────────────────────────
-
 function NovaMissaEspecialModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [form, setForm] = useState({
@@ -61,10 +59,9 @@ function NovaMissaEspecialModal({ onClose }: { onClose: () => void }) {
             label="Título"
             value={form.titulo}
             onChange={(e) => set("titulo", e.target.value)}
-            placeholder="Ex: Quinta-Feira Santa, Casamento João e Maria"
+            placeholder="Ex: Quinta-Feira Santa"
             required
           />
-
           <Input
             label="Data"
             type="date"
@@ -72,7 +69,6 @@ function NovaMissaEspecialModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => set("data", e.target.value)}
             required
           />
-
           <Input
             label="Horário"
             type="time"
@@ -80,7 +76,6 @@ function NovaMissaEspecialModal({ onClose }: { onClose: () => void }) {
             onChange={(e) => set("horario", e.target.value)}
             required
           />
-
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">
               Observações <span className="font-normal text-gray-400">(opcional)</span>
@@ -114,8 +109,6 @@ function NovaMissaEspecialModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Página ────────────────────────────────────────────────────────────────────
-
 export default function MissasPage() {
   const [mesAno, setMesAno] = useState(mesAtual);
   const [showModal, setShowModal] = useState(false);
@@ -132,28 +125,29 @@ export default function MissasPage() {
   });
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Missas</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-gray-500 hidden sm:block">
             Gerencie escalas e funções por celebração.
           </p>
         </div>
         <Button size="sm" onClick={() => setShowModal(true)}>
           <Plus className="h-4 w-4" />
-          Missa especial
+          <span className="hidden sm:inline">Missa especial</span>
+          <span className="sm:hidden">Especial</span>
         </Button>
       </div>
 
       {/* Seletor de mês */}
-      <div className="mb-6 flex gap-2">
+      <div className="mb-5 flex gap-2">
         {meses.map((m) => (
           <button
             key={m}
             onClick={() => setMesAno(m)}
             className={cn(
-              "rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors",
+              "flex-1 sm:flex-none rounded-lg px-4 py-2 text-sm font-medium capitalize transition-colors",
               mesAno === m
                 ? "bg-blue-600 text-white"
                 : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
@@ -178,10 +172,10 @@ export default function MissasPage() {
             <Link
               key={missa.id}
               href={`/missas/${missa.id}`}
-              className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 transition-colors hover:border-blue-200 hover:bg-blue-50/40"
+              className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 sm:px-5 sm:py-4 transition-colors hover:border-blue-200 hover:bg-blue-50/40"
             >
-              <div className="flex items-center gap-4">
-                <div className="text-center w-10">
+              <div className="flex items-center gap-3">
+                <div className="text-center w-9">
                   <p className="text-lg font-bold text-gray-800 leading-none">
                     {new Date(missa.data).getUTCDate()}
                   </p>
@@ -192,15 +186,18 @@ export default function MissasPage() {
                   </p>
                 </div>
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <p className="font-medium text-gray-900 text-sm sm:text-base">
                       {formatarHorario(missa.horario)}
-                      {missa.titulo && ` — ${missa.titulo}`}
+                      {missa.titulo && <span className="hidden sm:inline"> — {missa.titulo}</span>}
                     </p>
                     {missa.tipo === "ESPECIAL" && <Badge variant="yellow">Especial</Badge>}
                     {!missa.ativa && <Badge variant="red">Inativa</Badge>}
                   </div>
+                  {missa.titulo && (
+                    <p className="text-xs text-gray-500 truncate sm:hidden">{missa.titulo}</p>
+                  )}
                   <p className="text-xs text-gray-400 mt-0.5">
                     {missa.funcoes.length} {missa.funcoes.length !== 1 ? "funções" : "função"} ·{" "}
                     {missa._count?.escalas ?? missa.escalas?.length ?? 0} escalado
@@ -209,11 +206,17 @@ export default function MissasPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 shrink-0 ml-2">
                 {missa.publicadaEm ? (
-                  <Badge variant="green">Publicada</Badge>
+                  <Badge variant="green">
+                    <span className="hidden sm:inline">Publicada</span>
+                    <span className="sm:hidden">✓</span>
+                  </Badge>
                 ) : (
-                  <Badge variant="gray">Rascunho</Badge>
+                  <Badge variant="gray">
+                    <span className="hidden sm:inline">Rascunho</span>
+                    <span className="sm:hidden">—</span>
+                  </Badge>
                 )}
                 <ChevronRight className="h-4 w-4 text-gray-400" />
               </div>

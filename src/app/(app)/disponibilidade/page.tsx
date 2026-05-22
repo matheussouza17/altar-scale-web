@@ -21,7 +21,7 @@ import type {
 } from "@/types";
 import { cn } from "@/lib/utils";
 
-type SlotKey = string; // `${data}|${horario}`
+type SlotKey = string;
 
 function slotKey(data: string, horario: string): SlotKey {
   return `${data}|${horario}`;
@@ -92,7 +92,6 @@ export default function DisponibilidadePage() {
     onError: (err) => setError(getApiError(err)),
   });
 
-  // Agrupa missas por data
   const missasPorData = useMemo(() => {
     const map = new Map<string, Missa[]>();
     (missasData ?? []).forEach((m) => {
@@ -116,24 +115,22 @@ export default function DisponibilidadePage() {
   const loading = loadingMissas || loadingDisp;
 
   return (
-    <div className="max-w-xl">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Minha Disponibilidade</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Marque os dias e horários em que você pode servir.
-          </p>
-        </div>
+    <div className="max-w-xl mx-auto">
+      <div className="mb-5">
+        <h1 className="text-xl font-semibold text-gray-900">Minha Disponibilidade</h1>
+        <p className="mt-0.5 text-sm text-gray-500">
+          Marque os dias em que você pode servir.
+        </p>
       </div>
 
       {/* Seletor de mês */}
-      <div className="mb-6 flex gap-2">
+      <div className="mb-5 flex gap-2">
         {meses.map((m) => (
           <button
             key={m}
             onClick={() => { setMesAno(m); setSlots({}); }}
             className={cn(
-              "rounded-lg px-4 py-2 text-sm font-medium transition-colors capitalize",
+              "flex-1 sm:flex-none rounded-lg px-4 py-2 text-sm font-medium transition-colors capitalize",
               mesAno === m
                 ? "bg-blue-600 text-white"
                 : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50",
@@ -153,42 +150,44 @@ export default function DisponibilidadePage() {
           Nenhuma missa encontrada para este mês.
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           {missasPorData.map(([data, missas]) => (
             <div
               key={data}
-              className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4"
+              className="rounded-xl border border-gray-200 bg-white px-4 py-3"
             >
-              <div>
-                <p className="font-medium text-gray-900">
-                  {formatarDataCurta(data + "T00:00:00Z")}
-                </p>
-                {missas.some((m) => m.tipo === "ESPECIAL") && (
-                  <p className="text-xs text-amber-600 font-medium">
-                    {missas.find((m) => m.tipo === "ESPECIAL")?.titulo ?? "Missa especial"}
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 text-sm">
+                    {formatarDataCurta(data + "T00:00:00Z")}
                   </p>
-                )}
-              </div>
+                  {missas.some((m) => m.tipo === "ESPECIAL") && (
+                    <p className="text-xs text-amber-600 truncate">
+                      {missas.find((m) => m.tipo === "ESPECIAL")?.titulo ?? "Missa especial"}
+                    </p>
+                  )}
+                </div>
 
-              <div className="flex gap-2">
-                {missas.map((m) => {
-                  const key = slotKey(data, m.horario);
-                  const disponivel = slots[key] === "DISPONIVEL";
-                  return (
-                    <button
-                      key={m.id}
-                      onClick={() => toggle(data, m.horario)}
-                      className={cn(
-                        "min-w-16 rounded-lg px-3 py-2 text-sm font-medium transition-all border",
-                        disponivel
-                          ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
-                          : "bg-white text-gray-500 border-gray-300 hover:bg-gray-50",
-                      )}
-                    >
-                      {labelHorario(m.horario)}
-                    </button>
-                  );
-                })}
+                <div className="flex flex-wrap gap-2 justify-end">
+                  {missas.map((m) => {
+                    const key = slotKey(data, m.horario);
+                    const disponivel = slots[key] === "DISPONIVEL";
+                    return (
+                      <button
+                        key={m.id}
+                        onClick={() => toggle(data, m.horario)}
+                        className={cn(
+                          "rounded-lg px-3 py-2 text-sm font-medium transition-all border min-w-[64px]",
+                          disponivel
+                            ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
+                            : "bg-white text-gray-500 border-gray-300 hover:bg-gray-50",
+                        )}
+                      >
+                        {labelHorario(m.horario)}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           ))}
@@ -200,15 +199,16 @@ export default function DisponibilidadePage() {
       )}
 
       {missasPorData.length > 0 && (
-        <div className="mt-6 flex items-center gap-4">
+        <div className="mt-5 flex items-center gap-4">
           <Button
+            className="w-full sm:w-auto"
             onClick={() => mutation.mutate()}
             loading={mutation.isPending}
           >
             Salvar disponibilidade
           </Button>
           {saved && (
-            <span className="text-sm text-green-600 font-medium">Salvo com sucesso!</span>
+            <span className="text-sm text-green-600 font-medium">Salvo!</span>
           )}
         </div>
       )}

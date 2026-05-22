@@ -11,8 +11,6 @@ import { cn } from "@/lib/utils";
 import type { Funcao } from "@/types";
 import { Pencil, Check, X, Plus, Trash2 } from "lucide-react";
 
-// ── Modal: nova função ────────────────────────────────────────────────────────
-
 function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
@@ -23,12 +21,7 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
 
   const mutation = useMutation({
     mutationFn: () =>
-      api.post("/funcoes", {
-        nome,
-        descricao: descricao || null,
-        padrao,
-        ordem,
-      }),
+      api.post("/funcoes", { nome, descricao: descricao || null, padrao, ordem }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["funcoes"] });
       onClose();
@@ -37,8 +30,8 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
         <h2 className="mb-5 text-lg font-semibold text-gray-900">Nova função litúrgica</h2>
 
         <div className="flex flex-col gap-4">
@@ -57,15 +50,15 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
             <textarea
               value={descricao}
               onChange={(e) => { setDescricao(e.target.value); setError(""); }}
-              placeholder="Breve descrição da função..."
+              placeholder="Breve descrição..."
               rows={2}
               className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none"
             />
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col gap-1 flex-1">
-              <label className="text-sm font-medium text-gray-700">Ordem de exibição</label>
+            <div className="flex flex-col gap-1 w-28">
+              <label className="text-sm font-medium text-gray-700">Ordem</label>
               <input
                 type="number"
                 value={ordem}
@@ -74,7 +67,6 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>
-
             <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 select-none pt-5">
               <input
                 type="checkbox"
@@ -91,13 +83,9 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
           <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
 
-        <div className="mt-6 flex justify-end gap-2">
+        <div className="mt-5 flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button
-            loading={mutation.isPending}
-            disabled={!nome.trim()}
-            onClick={() => mutation.mutate()}
-          >
+          <Button loading={mutation.isPending} disabled={!nome.trim()} onClick={() => mutation.mutate()}>
             Criar
           </Button>
         </div>
@@ -105,8 +93,6 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
-
-// ── Linha editável ────────────────────────────────────────────────────────────
 
 function FuncaoRow({ funcao }: { funcao: Funcao }) {
   const qc = useQueryClient();
@@ -119,12 +105,7 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
 
   const editMutation = useMutation({
     mutationFn: () =>
-      api.patch(`/funcoes/${funcao.id}`, {
-        nome: nome || undefined,
-        descricao: descricao || null,
-        padrao,
-        ordem,
-      }),
+      api.patch(`/funcoes/${funcao.id}`, { nome: nome || undefined, descricao: descricao || null, padrao, ordem }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["funcoes"] });
       setEditing(false);
@@ -156,26 +137,26 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
 
   return (
     <div className={cn(
-      "rounded-xl border bg-white px-5 py-4 transition-colors",
+      "rounded-xl border bg-white px-4 py-4 transition-colors",
       !funcao.ativo && "opacity-60",
       editing ? "border-blue-300" : "border-gray-200",
     )}>
       {editing ? (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               placeholder="Nome da função"
             />
-            <div className="flex items-center gap-1.5 shrink-0">
-              <label className="text-xs text-gray-500">Ordem</label>
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 shrink-0">Ordem</label>
               <input
                 type="number"
                 value={ordem}
                 onChange={(e) => setOrdem(Number(e.target.value))}
-                className="w-16 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-sm focus:border-blue-500 focus:outline-none"
+                className="w-20 rounded-lg border border-gray-300 px-2 py-2 text-center text-sm focus:border-blue-500 focus:outline-none"
                 min={0}
               />
             </div>
@@ -184,7 +165,7 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
           <input
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             placeholder="Descrição (opcional)"
           />
 
@@ -210,54 +191,50 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-medium text-gray-900">{funcao.nome}</p>
-              {funcao.padrao && <Badge variant="blue">Padrão</Badge>}
-              {!funcao.ativo && <Badge variant="red">Inativa</Badge>}
+        <>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-medium text-gray-900">{funcao.nome}</p>
+                {funcao.padrao && <Badge variant="blue">Padrão</Badge>}
+                {!funcao.ativo && <Badge variant="red">Inativa</Badge>}
+              </div>
+              {funcao.descricao && (
+                <p className="text-xs text-gray-400 truncate mt-0.5">{funcao.descricao}</p>
+              )}
             </div>
-            {funcao.descricao && (
-              <p className="text-xs text-gray-400 truncate mt-0.5">{funcao.descricao}</p>
-            )}
-          </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              size="sm"
-              variant={funcao.ativo ? "secondary" : "ghost"}
-              loading={toggleAtivoMutation.isPending}
-              onClick={() => toggleAtivoMutation.mutate()}
-            >
-              {funcao.ativo ? "Desativar" : "Reativar"}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              loading={excluirMutation.isPending}
-              onClick={() => {
-                if (confirm(`Excluir "${funcao.nome}"? Esta ação não pode ser desfeita.`)) {
-                  excluirMutation.mutate();
-                }
-              }}
-              className="text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <Button
+                size="sm"
+                variant={funcao.ativo ? "secondary" : "ghost"}
+                loading={toggleAtivoMutation.isPending}
+                onClick={() => toggleAtivoMutation.mutate()}
+              >
+                {funcao.ativo ? "Desativar" : "Reativar"}
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing(true)}>
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                loading={excluirMutation.isPending}
+                onClick={() => {
+                  if (confirm(`Excluir "${funcao.nome}"?`)) excluirMutation.mutate();
+                }}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-      {!editing && error && (
-        <p className="mt-2 text-xs text-red-600">{error}</p>
+          {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
+        </>
       )}
     </div>
   );
 }
-
-// ── Página ────────────────────────────────────────────────────────────────────
 
 export default function FuncoesPage() {
   const [incluirInativas, setIncluirInativas] = useState(false);
@@ -274,11 +251,11 @@ export default function FuncoesPage() {
   });
 
   return (
-    <div className="max-w-2xl">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="max-w-2xl mx-auto">
+      <div className="mb-5 flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Funções litúrgicas</h1>
-          <p className="mt-0.5 text-sm text-gray-500">
+          <p className="mt-0.5 text-sm text-gray-500 hidden sm:block">
             Gerencie as funções que podem ser atribuídas nas escalas.
           </p>
         </div>
@@ -290,11 +267,12 @@ export default function FuncoesPage() {
               onChange={(e) => setIncluirInativas(e.target.checked)}
               className="rounded"
             />
-            Inativas
+            <span className="hidden sm:inline">Inativas</span>
           </label>
           <Button size="sm" onClick={() => setShowModal(true)}>
             <Plus className="h-4 w-4" />
-            Nova função
+            <span className="hidden sm:inline">Nova função</span>
+            <span className="sm:hidden">Nova</span>
           </Button>
         </div>
       </div>

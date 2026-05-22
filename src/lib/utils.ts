@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { HorarioMissa } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -35,8 +34,9 @@ export function formatarDataCurta(iso: string): string {
   return `${dia}/${mes}`;
 }
 
-export function formatarHorario(horario: HorarioMissa): string {
-  return horario === "H09" ? "09h00" : "18h00";
+/** "09:00" → "09h00", "19:30" → "19h30" */
+export function formatarHorario(horario: string): string {
+  return horario.replace(":", "h");
 }
 
 export function formatarMesAno(mesAno: string): string {

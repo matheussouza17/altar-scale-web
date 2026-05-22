@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { CalendarDays, LayoutList, LogOut } from "lucide-react";
+import { CalendarDays, LayoutList, LogOut, Settings2, Users } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -18,6 +18,18 @@ const navItems: NavItem[] = [
     href: "/missas",
     label: "Missas",
     icon: <LayoutList className="h-5 w-5" />,
+    staffOnly: true,
+  },
+  {
+    href: "/servidores",
+    label: "Servidores",
+    icon: <Users className="h-5 w-5" />,
+    staffOnly: true,
+  },
+  {
+    href: "/funcoes",
+    label: "Funções",
+    icon: <Settings2 className="h-5 w-5" />,
     staffOnly: true,
   },
   {

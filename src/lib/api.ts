@@ -25,7 +25,15 @@ api.interceptors.response.use(
 
 export function getApiError(err: unknown): string {
   if (axios.isAxiosError(err)) {
-    return err.response?.data?.message ?? err.message;
+    const data = err.response?.data;
+    if (data?.error === "VALIDATION_ERROR" && data?.details?.fieldErrors) {
+      const fieldErrors: Record<string, string[]> = data.details.fieldErrors;
+      const msgs = Object.entries(fieldErrors)
+        .filter(([, errs]) => errs.length > 0)
+        .map(([field, errs]) => `${field}: ${errs[0]}`);
+      if (msgs.length > 0) return msgs.join(" · ");
+    }
+    return data?.message ?? err.message;
   }
   return "Erro inesperado.";
 }

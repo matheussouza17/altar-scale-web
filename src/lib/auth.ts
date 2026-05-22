@@ -16,7 +16,10 @@ export interface JwtPayload {
 export function decodeToken(token: string): JwtPayload | null {
   try {
     const payload = token.split(".")[1];
-    return JSON.parse(atob(payload)) as JwtPayload;
+    // atob não lida com UTF-8; usamos TextDecoder para suportar acentos
+    const binary = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return JSON.parse(new TextDecoder().decode(bytes)) as JwtPayload;
   } catch {
     return null;
   }

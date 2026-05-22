@@ -1,6 +1,5 @@
 export type PapelUsuario = "SERVIDOR" | "COORDENADOR" | "ADMIN";
 export type TipoMissa = "DOMINICAL" | "ESPECIAL";
-export type HorarioMissa = "H09" | "H18";
 export type StatusDisponibilidade = "DISPONIVEL" | "INDISPONIVEL";
 
 export interface User {
@@ -52,7 +51,7 @@ export interface Missa {
   id: string;
   titulo: string | null;
   data: string;
-  horario: HorarioMissa;
+  horario: string; // "HH:MM" — ex: "09:00", "18:00", "19:30"
   tipo: TipoMissa;
   observacoes: string | null;
   ativa: boolean;
@@ -68,7 +67,7 @@ export interface Disponibilidade {
   userId: string;
   mesAno: string;
   data: string;
-  horario: HorarioMissa;
+  horario: string;
   status: StatusDisponibilidade;
 }
 
@@ -88,6 +87,6 @@ export interface ServidorDisponivel {
 
 export interface DisponibilidadeItem {
   data: string;
-  horario: HorarioMissa;
+  horario: string;
   status: StatusDisponibilidade;
 }

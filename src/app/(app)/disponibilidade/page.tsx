@@ -4,19 +4,23 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, getApiError } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import {
   mesAtual,
   proximoMes,
   formatarMesAno,
+  formatarData,
   formatarDataCurta,
+  formatarHorario,
   toDateString,
 } from "@/lib/utils";
 import type {
   Disponibilidade,
   DisponibilidadeItem,
   Missa,
+  ProximaMissa,
   StatusDisponibilidade,
 } from "@/types";
 import { cn } from "@/lib/utils";
@@ -29,6 +33,75 @@ function slotKey(data: string, horario: string): SlotKey {
 
 function labelHorario(horario: string): string {
   return horario.replace(":", "h");
+}
+
+function ProximaMissasSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ["proximas-missas"],
+    queryFn: async () => {
+      const res = await api.get<{ data: { proximas: ProximaMissa[] } }>("/missas/minhas");
+      return res.data.data.proximas;
+    },
+  });
+
+  return (
+    <div className="mb-8">
+      <div className="mb-4">
+        <h1 className="text-xl font-semibold text-gray-900">Próximas Missas</h1>
+        <p className="mt-0.5 text-sm text-gray-500">Missas para as quais você está escalado.</p>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center py-6">
+          <Spinner />
+        </div>
+      ) : !data?.length ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-400">
+          Você não está escalado em nenhuma missa próxima.
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {data.map((missa) => (
+            <div
+              key={missa.missaId}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 text-sm">
+                    {formatarData(missa.data)} · {formatarHorario(missa.horario)}
+                  </p>
+                  {missa.titulo && (
+                    <p className="mt-0.5 text-xs text-gray-500 truncate">{missa.titulo}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {missa.tipo === "ESPECIAL" && <Badge variant="yellow">Especial</Badge>}
+                  {!missa.publicada && <Badge variant="gray">Rascunho</Badge>}
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-col gap-1.5">
+                {missa.funcoes.map((f) => (
+                  <div key={f.escalaId} className="flex items-start gap-2">
+                    <span className="shrink-0 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                      {f.codigo}
+                    </span>
+                    <div className="min-w-0">
+                      <span className="text-sm text-gray-700">{f.nome}</span>
+                      {f.observacao && (
+                        <p className="mt-0.5 text-xs text-gray-500 italic">{f.observacao}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function DisponibilidadePage() {
@@ -116,7 +189,9 @@ export default function DisponibilidadePage() {
 
   return (
     <div className="max-w-xl mx-auto">
-      <div className="mb-5">
+      <ProximaMissasSection />
+
+      <div className="mb-4">
         <h1 className="text-xl font-semibold text-gray-900">Minha Disponibilidade</h1>
         <p className="mt-0.5 text-sm text-gray-500">
           Marque os dias em que você pode servir.

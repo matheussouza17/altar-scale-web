@@ -8,8 +8,12 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { formatarData, formatarHorario } from "@/lib/utils";
-import type { Funcao, Missa, ServidorDisponivel } from "@/types";
-import { ArrowLeft, Copy, Check, X, UserPlus, SlidersHorizontal } from "lucide-react";
+import type { Escala, Funcao, Missa, ServidorDisponivel } from "@/types";
+import { ArrowLeft, Check, Copy, Pencil, SlidersHorizontal, UserPlus, X } from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// Modal: Gerenciar funções da missa
+// ---------------------------------------------------------------------------
 
 function GerenciarFuncoesModal({
   missa,
@@ -77,7 +81,9 @@ function GerenciarFuncoesModal({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{f.nome}</p>
                     {temEscala && !checked && (
-                      <p className="text-xs text-amber-600">Escalados serão removidos</p>
+                      <p className="text-xs text-amber-600">
+                        Remova os servidores escalados antes de desativar esta função.
+                      </p>
                     )}
                   </div>
                 </label>
@@ -99,6 +105,10 @@ function GerenciarFuncoesModal({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Painel inline: adicionar servidor a uma função
+// ---------------------------------------------------------------------------
+
 function AdicionarServidor({
   missaId,
   funcaoId,
@@ -111,6 +121,7 @@ function AdicionarServidor({
   onAdded: () => void;
 }) {
   const [userId, setUserId] = useState("");
+  const [observacao, setObservacao] = useState("");
   const [error, setError] = useState("");
 
   const { data, isLoading } = useQuery({
@@ -124,7 +135,12 @@ function AdicionarServidor({
   });
 
   const mutation = useMutation({
-    mutationFn: () => api.post(`/missas/${missaId}/escalas`, { funcaoId, userId }),
+    mutationFn: () =>
+      api.post(`/missas/${missaId}/escalas`, {
+        funcaoId,
+        userId,
+        observacao: observacao.trim() || undefined,
+      }),
     onSuccess: () => { onAdded(); onClose(); },
     onError: (err) => setError(getApiError(err)),
   });
@@ -136,41 +152,162 @@ function AdicionarServidor({
       ) : !data?.servidores.length ? (
         <p className="text-sm text-gray-500">Nenhum servidor disponível para este horário.</p>
       ) : (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <select
-            value={userId}
-            onChange={(e) => { setUserId(e.target.value); setError(""); }}
-            className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          >
-            <option value="">Selecionar servidor...</option>
-            {data.servidores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nome}
-                {s.funcoesNaMissa.length > 0 &&
-                  ` (${s.funcoesNaMissa.map((f) => f.codigo).join(", ")})`}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className="flex-1 sm:flex-none"
-              disabled={!userId}
-              loading={mutation.isPending}
-              onClick={() => mutation.mutate()}
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <select
+              value={userId}
+              onChange={(e) => { setUserId(e.target.value); setError(""); }}
+              className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             >
-              Confirmar
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
+              <option value="">Selecionar servidor...</option>
+              {data.servidores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.nome}
+                  {s.funcoesNaMissa.length > 0 &&
+                    ` (${s.funcoesNaMissa.map((f) => f.codigo).join(", ")})`}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="flex-1 sm:flex-none"
+                disabled={!userId}
+                loading={mutation.isPending}
+                onClick={() => mutation.mutate()}
+              >
+                Confirmar
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
+          <textarea
+            value={observacao}
+            onChange={(e) => setObservacao(e.target.value)}
+            placeholder="Observação para esta função (opcional)..."
+            className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none resize-none"
+            rows={2}
+          />
         </div>
       )}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Card de escala: exibe servidor com observação e opções de editar/remover
+// ---------------------------------------------------------------------------
+
+function EscalaItem({
+  e,
+  publicada,
+  missaId,
+  onChanged,
+}: {
+  e: Escala;
+  publicada: boolean;
+  missaId: string;
+  onChanged: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [obsValue, setObsValue] = useState(e.observacao ?? "");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const removerMutation = useMutation({
+    mutationFn: () => api.delete(`/missas/${missaId}/escalas/${e.id}`),
+    onSuccess: onChanged,
+  });
+
+  async function salvarObs() {
+    setSaving(true);
+    setSaveError("");
+    try {
+      await api.patch(`/missas/${missaId}/escalas/${e.id}`, {
+        observacao: obsValue.trim() || null,
+      });
+      onChanged();
+      setEditing(false);
+    } catch (err) {
+      setSaveError(getApiError(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function iniciarEdicao() {
+    setObsValue(e.observacao ?? "");
+    setSaveError("");
+    setEditing(true);
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium text-gray-800">{e.user.nome}</span>
+        {!publicada && (
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={editing ? () => setEditing(false) : iniciarEdicao}
+              className="rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+              title={editing ? "Cancelar" : "Editar observação"}
+            >
+              {editing ? <X className="h-3.5 w-3.5" /> : <Pencil className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              onClick={() => removerMutation.mutate()}
+              disabled={removerMutation.isPending}
+              className="rounded p-0.5 text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors disabled:opacity-40"
+              title="Remover"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {!editing && e.observacao && (
+        <p className="mt-1 text-xs text-gray-500 italic">{e.observacao}</p>
+      )}
+
+      {editing && (
+        <div className="mt-2">
+          <textarea
+            value={obsValue}
+            onChange={(e) => setObsValue(e.target.value)}
+            placeholder="Observação (opcional)..."
+            className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs focus:border-blue-500 focus:outline-none resize-none"
+            rows={2}
+            autoFocus
+          />
+          {saveError && <p className="mt-1 text-xs text-red-600">{saveError}</p>}
+          <div className="mt-1.5 flex gap-1.5">
+            <button
+              onClick={salvarObs}
+              disabled={saving}
+              className="rounded-md bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            >
+              {saving ? "..." : "Salvar"}
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Página principal
+// ---------------------------------------------------------------------------
 
 export default function MissaDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -207,12 +344,6 @@ export default function MissaDetailPage() {
     onError: (err) => setActionError(getApiError(err)),
   });
 
-  const removerEscalaMutation = useMutation({
-    mutationFn: (escalaId: string) => api.delete(`/missas/${id}/escalas/${escalaId}`),
-    onSuccess: () => { invalidate(); setActionError(""); },
-    onError: (err) => setActionError(getApiError(err)),
-  });
-
   async function handleExportar() {
     try {
       const res = await api.get<{ data: { texto: string } }>(`/missas/${id}/exportar`);
@@ -238,7 +369,10 @@ export default function MissaDetailPage() {
     <div className="max-w-2xl mx-auto">
       {/* Cabeçalho */}
       <div className="mb-5 flex items-start gap-3">
-        <button onClick={() => router.back()} className="mt-0.5 text-gray-400 hover:text-gray-600 transition-colors shrink-0">
+        <button
+          onClick={() => router.back()}
+          className="mt-0.5 text-gray-400 hover:text-gray-600 transition-colors shrink-0"
+        >
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 min-w-0">
@@ -247,20 +381,33 @@ export default function MissaDetailPage() {
               {formatarData(missa.data)} · {formatarHorario(missa.horario)}
             </h1>
             {missa.tipo === "ESPECIAL" && <Badge variant="yellow">Especial</Badge>}
-            {publicada ? <Badge variant="green">Publicada</Badge> : <Badge variant="gray">Rascunho</Badge>}
+            {publicada
+              ? <Badge variant="green">Publicada</Badge>
+              : <Badge variant="gray">Rascunho</Badge>}
           </div>
-          {missa.titulo && <p className="mt-0.5 text-sm text-gray-500 truncate">{missa.titulo}</p>}
+          {missa.titulo && (
+            <p className="mt-0.5 text-sm text-gray-500 truncate">{missa.titulo}</p>
+          )}
         </div>
       </div>
 
       {/* Ações */}
       <div className="mb-5 flex flex-wrap gap-2">
         {publicada ? (
-          <Button variant="secondary" size="sm" loading={despublicarMutation.isPending} onClick={() => despublicarMutation.mutate()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={despublicarMutation.isPending}
+            onClick={() => despublicarMutation.mutate()}
+          >
             Despublicar
           </Button>
         ) : (
-          <Button size="sm" loading={publicarMutation.isPending} onClick={() => publicarMutation.mutate()}>
+          <Button
+            size="sm"
+            loading={publicarMutation.isPending}
+            onClick={() => publicarMutation.mutate()}
+          >
             Publicar escala
           </Button>
         )}
@@ -286,7 +433,10 @@ export default function MissaDetailPage() {
         <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-sm text-gray-400">
           Nenhuma função configurada.{" "}
           {!publicada && (
-            <button className="text-blue-600 underline" onClick={() => setGerenciarFuncoes(true)}>
+            <button
+              className="text-blue-600 underline"
+              onClick={() => setGerenciarFuncoes(true)}
+            >
               Adicionar funções
             </button>
           )}
@@ -296,7 +446,9 @@ export default function MissaDetailPage() {
           {missa.funcoes
             .sort((a, b) => a.funcao.ordem - b.funcao.ordem)
             .map((mf) => {
-              const escalasNaFuncao = (missa.escalas ?? []).filter((e) => e.funcaoId === mf.funcaoId);
+              const escalasNaFuncao = (missa.escalas ?? []).filter(
+                (e) => e.funcaoId === mf.funcaoId,
+              );
               const aberta = addingFuncao === mf.funcaoId;
 
               return (
@@ -305,7 +457,8 @@ export default function MissaDetailPage() {
                     <div className="min-w-0">
                       <p className="font-medium text-gray-900">{mf.funcao.nome}</p>
                       <p className="text-xs text-gray-400">
-                        {escalasNaFuncao.length}/{mf.quantidade} vaga{mf.quantidade !== 1 ? "s" : ""}
+                        {escalasNaFuncao.length}/{mf.quantidade} vaga
+                        {mf.quantidade !== 1 ? "s" : ""}
                       </p>
                     </div>
                     {escalasNaFuncao.length < mf.quantidade && !publicada && (
@@ -321,22 +474,15 @@ export default function MissaDetailPage() {
                   </div>
 
                   {escalasNaFuncao.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
+                    <div className="mt-3 flex flex-col gap-1.5">
                       {escalasNaFuncao.map((e) => (
-                        <div
+                        <EscalaItem
                           key={e.id}
-                          className="flex items-center gap-1.5 rounded-full bg-gray-100 pl-3 pr-1.5 py-1 text-sm text-gray-800"
-                        >
-                          {e.user.nome}
-                          {!publicada && (
-                            <button
-                              onClick={() => removerEscalaMutation.mutate(e.id)}
-                              className="rounded-full p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-700 transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
+                          e={e}
+                          publicada={publicada}
+                          missaId={id}
+                          onChanged={invalidate}
+                        />
                       ))}
                     </div>
                   )}

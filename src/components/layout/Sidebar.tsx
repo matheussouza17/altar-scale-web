@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
-import { CalendarDays, LayoutList, LogOut, Settings2, Users } from "lucide-react";
+import { CalendarDays, CircleUser, LayoutList, LogOut, Settings2, Users } from "lucide-react";
 
 interface NavItem {
   href: string;
@@ -36,6 +36,11 @@ const navItems: NavItem[] = [
     href: "/disponibilidade",
     label: "Disponibilidade",
     icon: <CalendarDays className="h-5 w-5" />,
+  },
+  {
+    href: "/conta",
+    label: "Conta",
+    icon: <CircleUser className="h-5 w-5" />,
   },
 ];
 

@@ -43,6 +43,7 @@ export interface Escala {
   funcaoId: string;
   userId: string;
   vaga: number;
+  observacao: string | null;
   user: EscalaUser;
   funcao: Funcao;
 }
@@ -65,10 +66,27 @@ export interface Missa {
 export interface Disponibilidade {
   id: string;
   userId: string;
-  mesAno: string;
   data: string;
   horario: string;
   status: StatusDisponibilidade;
+}
+
+export interface ProximaMissaFuncao {
+  escalaId: string;
+  codigo: string;
+  nome: string;
+  vaga: number;
+  observacao: string | null;
+}
+
+export interface ProximaMissa {
+  missaId: string;
+  data: string;
+  horario: string;
+  titulo: string | null;
+  tipo: TipoMissa;
+  publicada: boolean;
+  funcoes: ProximaMissaFuncao[];
 }
 
 export interface ServidorDisponivel {

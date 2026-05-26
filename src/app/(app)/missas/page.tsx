@@ -109,17 +109,24 @@ function NovaMissaEspecialModal({ onClose }: { onClose: () => void }) {
   );
 }
 
+function hojeStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function MissasPage() {
   const [mesAno, setMesAno] = useState(mesAtual);
   const [showModal, setShowModal] = useState(false);
+  const [mostrarAnteriores, setMostrarAnteriores] = useState(false);
   const meses = useMemo(() => [mesAtual(), proximoMes()], []);
 
+  const eMesAtual = mesAno === mesAtual();
+
   const { data, isLoading } = useQuery({
-    queryKey: ["missas", mesAno],
+    queryKey: ["missas", mesAno, mostrarAnteriores],
     queryFn: async () => {
-      const res = await api.get<{ data: Missa[] }>("/missas", {
-        params: { mesAno },
-      });
+      const params: Record<string, string> = { mesAno };
+      if (eMesAtual && !mostrarAnteriores) params.de = hojeStr();
+      const res = await api.get<{ data: Missa[] }>("/missas", { params });
       return res.data.data;
     },
   });
@@ -222,6 +229,17 @@ export default function MissasPage() {
               </div>
             </Link>
           ))}
+        </div>
+      )}
+
+      {eMesAtual && (
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setMostrarAnteriores((v) => !v)}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors underline underline-offset-2"
+          >
+            {mostrarAnteriores ? "Ocultar missas anteriores" : "Mostrar missas anteriores"}
+          </button>
         </div>
       )}
 

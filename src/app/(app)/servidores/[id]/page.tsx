@@ -50,7 +50,7 @@ export default function ServidorPerfilPage() {
   const [resetError, setResetError] = useState("");
   const [resetSaved, setResetSaved] = useState(false);
 
-  const [mesAno, setMesAno] = useState(proximoMes);
+  const [mesAno, setMesAno] = useState(mesAtual);
   const [slots, setSlots] = useState<Record<SlotKey, StatusDisponibilidade>>({});
   const [dispSaved, setDispSaved] = useState(false);
   const [dispError, setDispError] = useState("");
@@ -323,7 +323,7 @@ export default function ServidorPerfilPage() {
           {meses.map((m) => (
             <button
               key={m}
-              onClick={() => { setMesAno(m); setSlots({}); }}
+              onClick={() => { if (m !== mesAno) { setMesAno(m); setSlots({}); } }}
               className={cn(
                 "flex-1 sm:flex-none rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition-colors",
                 mesAno === m

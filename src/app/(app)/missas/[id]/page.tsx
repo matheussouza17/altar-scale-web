@@ -24,8 +24,12 @@ function GerenciarFuncoesModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const habilitadas = new Set(missa.funcoes.map((mf) => mf.funcaoId));
-  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set(habilitadas));
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(
+    new Set(missa.funcoes.map((mf) => mf.funcaoId)),
+  );
+  const [quantidades, setQuantidades] = useState<Record<string, number>>(
+    Object.fromEntries(missa.funcoes.map((mf) => [mf.funcaoId, mf.quantidade])),
+  );
   const [error, setError] = useState("");
 
   const { data: todasFuncoes, isLoading } = useQuery({
@@ -40,43 +44,63 @@ function GerenciarFuncoesModal({
 
   const mutation = useMutation({
     mutationFn: () =>
-      api.patch(`/missas/${missa.id}`, { funcaoIds: [...selecionadas] }),
+      api.put(`/missas/${missa.id}/funcoes`, {
+        funcoes: [...selecionadas].map((funcaoId) => ({
+          funcaoId,
+          quantidade: quantidades[funcaoId] ?? 1,
+        })),
+      }),
     onSuccess: () => { onSaved(); onClose(); },
     onError: (err) => setError(getApiError(err)),
   });
 
-  function toggle(id: string) {
+  function toggle(f: Funcao) {
     setSelecionadas((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(f.id)) {
+        next.delete(f.id);
+      } else {
+        next.add(f.id);
+        setQuantidades((q) => ({ ...q, [f.id]: q[f.id] ?? f.quantidadePadrao ?? 1 }));
+      }
       return next;
     });
     setError("");
+  }
+
+  function ajustarQtd(funcaoId: string, delta: number) {
+    setQuantidades((prev) => ({
+      ...prev,
+      [funcaoId]: Math.max(1, Math.min(20, (prev[funcaoId] ?? 1) + delta)),
+    }));
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
         <h2 className="mb-1 text-lg font-semibold text-gray-900">Funções desta missa</h2>
-        <p className="mb-4 text-sm text-gray-500">Marque quais funções estarão ativas.</p>
+        <p className="mb-4 text-sm text-gray-500">Ative as funções e defina quantas vagas para esta celebração.</p>
 
         {isLoading ? (
           <div className="flex justify-center py-6"><Spinner /></div>
         ) : (
-          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+          <div className="flex flex-col gap-2 max-h-72 overflow-y-auto">
             {(todasFuncoes ?? []).map((f) => {
               const checked = selecionadas.has(f.id);
               const temEscala = missa.escalas?.some((e) => e.funcaoId === f.id);
+              const qtd = quantidades[f.id] ?? f.quantidadePadrao ?? 1;
               return (
-                <label
+                <div
                   key={f.id}
-                  className="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-100 px-4 py-3 hover:bg-gray-50 select-none"
+                  className={`flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors ${
+                    checked ? "border-blue-200 bg-blue-50/40" : "border-gray-100"
+                  }`}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
-                    onChange={() => toggle(f.id)}
-                    className="rounded"
+                    onChange={() => toggle(f)}
+                    className="rounded shrink-0 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">{f.nome}</p>
@@ -86,7 +110,30 @@ function GerenciarFuncoesModal({
                       </p>
                     )}
                   </div>
-                </label>
+                  {checked ? (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => ajustarQtd(f.id, -1)}
+                        disabled={qtd <= 1}
+                        className="flex h-6 w-6 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors text-sm font-medium"
+                      >
+                        −
+                      </button>
+                      <span className="w-5 text-center text-sm font-medium text-gray-800">{qtd}</span>
+                      <button
+                        onClick={() => ajustarQtd(f.id, +1)}
+                        disabled={qtd >= 20}
+                        className="flex h-6 w-6 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors text-sm font-medium"
+                      >
+                        +
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-gray-400 shrink-0">
+                      {f.quantidadePadrao} {f.quantidadePadrao === 1 ? "vaga" : "vagas"}
+                    </span>
+                  )}
+                </div>
               );
             })}
           </div>
@@ -319,7 +366,7 @@ export default function MissaDetailPage() {
   const [copied, setCopied] = useState(false);
   const [actionError, setActionError] = useState("");
 
-  const { data: missa, isLoading } = useQuery({
+  const { data: missa, isLoading, isError, error } = useQuery({
     queryKey: ["missa", id],
     queryFn: async () => {
       const res = await api.get<{ data: Missa }>(`/missas/${id}`);
@@ -357,6 +404,21 @@ export default function MissaDetailPage() {
 
   if (isLoading) {
     return <div className="flex justify-center py-12"><Spinner /></div>;
+  }
+
+  if (isError) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-sm text-red-600 font-medium">Erro ao carregar missa.</p>
+        <p className="mt-1 text-xs text-gray-400">{getApiError(error)}</p>
+        <button
+          onClick={() => router.back()}
+          className="mt-4 text-sm text-blue-600 hover:underline"
+        >
+          Voltar
+        </button>
+      </div>
+    );
   }
 
   if (!missa) {

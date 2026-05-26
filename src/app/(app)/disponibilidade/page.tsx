@@ -108,7 +108,7 @@ export default function DisponibilidadePage() {
   const { user } = useAuth();
   const qc = useQueryClient();
 
-  const [mesAno, setMesAno] = useState(proximoMes);
+  const [mesAno, setMesAno] = useState(mesAtual);
   const [slots, setSlots] = useState<Record<SlotKey, StatusDisponibilidade>>({});
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -116,12 +116,12 @@ export default function DisponibilidadePage() {
   const meses = useMemo(() => [mesAtual(), proximoMes()], []);
 
   const { data: missasData, isLoading: loadingMissas } = useQuery({
-    queryKey: ["missas", mesAno],
+    queryKey: ["missas-disp", mesAno],
     queryFn: async () => {
-      const res = await api.get<{ data: Missa[] }>("/missas", {
-        params: { mesAno, ativa: "true" },
-      });
-      return res.data.data;
+      const params: Record<string, string> = { mesAno, ativa: "true" };
+      if (mesAno === mesAtual()) params.de = new Date().toISOString().slice(0, 10);
+      const res = await api.get<{ data: Missa[] }>("/missas", { params });
+      return res.data.data.filter((m) => !m.publicadaEm);
     },
   });
 
@@ -203,7 +203,7 @@ export default function DisponibilidadePage() {
         {meses.map((m) => (
           <button
             key={m}
-            onClick={() => { setMesAno(m); setSlots({}); }}
+            onClick={() => { if (m !== mesAno) { setMesAno(m); setSlots({}); } }}
             className={cn(
               "flex-1 sm:flex-none rounded-lg px-4 py-2 text-sm font-medium transition-colors capitalize",
               mesAno === m

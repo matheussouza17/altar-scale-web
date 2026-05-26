@@ -20,6 +20,7 @@ export interface Funcao {
   ordem: number;
   padrao: boolean;
   ativo: boolean;
+  quantidadePadrao: number;
 }
 
 export interface MissaFuncao {

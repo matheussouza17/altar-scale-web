@@ -11,17 +11,42 @@ import { cn } from "@/lib/utils";
 import type { Funcao } from "@/types";
 import { Pencil, Check, X, Plus, Trash2 } from "lucide-react";
 
+function Stepper({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(1, value - 1))}
+        disabled={value <= 1}
+        className="flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors text-sm font-medium"
+      >
+        −
+      </button>
+      <span className="w-6 text-center text-sm font-medium text-gray-800">{value}</span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(20, value + 1))}
+        disabled={value >= 20}
+        className="flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors text-sm font-medium"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
 function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [descricao, setDescricao] = useState("");
   const [padrao, setPadrao] = useState(false);
   const [ordem, setOrdem] = useState(0);
+  const [quantidadePadrao, setQuantidadePadrao] = useState(1);
   const [error, setError] = useState("");
 
   const mutation = useMutation({
     mutationFn: () =>
-      api.post("/funcoes", { nome, descricao: descricao || null, padrao, ordem }),
+      api.post("/funcoes", { nome, descricao: descricao || null, padrao, ordem, quantidadePadrao }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["funcoes"] });
       onClose();
@@ -56,7 +81,7 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1 w-28">
               <label className="text-sm font-medium text-gray-700">Ordem</label>
               <input
@@ -67,7 +92,11 @@ function NovaFuncaoModal({ onClose }: { onClose: () => void }) {
                 className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 select-none pt-5">
+            <div className="flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Vagas padrão</label>
+              <Stepper value={quantidadePadrao} onChange={setQuantidadePadrao} />
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 select-none pb-0.5">
               <input
                 type="checkbox"
                 checked={padrao}
@@ -101,11 +130,12 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
   const [descricao, setDescricao] = useState(funcao.descricao ?? "");
   const [padrao, setPadrao] = useState(funcao.padrao);
   const [ordem, setOrdem] = useState(funcao.ordem);
+  const [quantidadePadrao, setQuantidadePadrao] = useState(funcao.quantidadePadrao);
   const [error, setError] = useState("");
 
   const editMutation = useMutation({
     mutationFn: () =>
-      api.patch(`/funcoes/${funcao.id}`, { nome: nome || undefined, descricao: descricao || null, padrao, ordem }),
+      api.patch(`/funcoes/${funcao.id}`, { nome: nome || undefined, descricao: descricao || null, padrao, ordem, quantidadePadrao }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["funcoes"] });
       setEditing(false);
@@ -131,6 +161,7 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
     setDescricao(funcao.descricao ?? "");
     setPadrao(funcao.padrao);
     setOrdem(funcao.ordem);
+    setQuantidadePadrao(funcao.quantidadePadrao);
     setError("");
     setEditing(false);
   }
@@ -169,15 +200,21 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
             placeholder="Descrição (opcional)"
           />
 
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 select-none">
-            <input
-              type="checkbox"
-              checked={padrao}
-              onChange={(e) => setPadrao(e.target.checked)}
-              className="rounded"
-            />
-            Incluir por padrão em novas missas dominicais
-          </label>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 shrink-0">Vagas padrão</label>
+              <Stepper value={quantidadePadrao} onChange={setQuantidadePadrao} />
+            </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-700 select-none">
+              <input
+                type="checkbox"
+                checked={padrao}
+                onChange={(e) => setPadrao(e.target.checked)}
+                className="rounded"
+              />
+              Incluir por padrão em novas missas dominicais
+            </label>
+          </div>
 
           {error && <p className="text-xs text-red-600">{error}</p>}
 
@@ -199,9 +236,14 @@ function FuncaoRow({ funcao }: { funcao: Funcao }) {
                 {funcao.padrao && <Badge variant="blue">Padrão</Badge>}
                 {!funcao.ativo && <Badge variant="red">Inativa</Badge>}
               </div>
-              {funcao.descricao && (
-                <p className="text-xs text-gray-400 truncate mt-0.5">{funcao.descricao}</p>
-              )}
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                {funcao.descricao && (
+                  <p className="text-xs text-gray-400 truncate">{funcao.descricao}</p>
+                )}
+                <span className="text-xs text-gray-400">
+                  {funcao.quantidadePadrao} {funcao.quantidadePadrao === 1 ? "vaga" : "vagas"}
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">

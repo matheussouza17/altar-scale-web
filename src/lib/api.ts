@@ -15,7 +15,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    // Redireciona para login apenas quando havia um token (sessão expirada),
+    // não em tentativas de login/reset com credenciais inválidas.
+    if (err.response?.status === 401 && getToken()) {
       removeToken();
       if (typeof window !== "undefined") window.location.href = "/login";
     }

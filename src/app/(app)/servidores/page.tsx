@@ -16,22 +16,22 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
   const { user: me } = useAuth();
   const qc = useQueryClient();
   const [form, setForm] = useState({
-    nome: "", email: "", senha: "", telefone: "", papel: "SERVIDOR" as PapelUsuario,
+    nome: "", email: "", telefone: "", papel: "SERVIDOR" as PapelUsuario,
   });
   const [error, setError] = useState("");
+  const [emailEnviado, setEmailEnviado] = useState("");
 
   const mutation = useMutation({
     mutationFn: () =>
-      api.post("/auth/usuarios", {
+      api.post<{ data: { email: string } }>("/auth/usuarios", {
         nome: form.nome,
         email: form.email,
-        senha: form.senha,
         telefone: form.telefone || undefined,
         papel: form.papel,
       }),
-    onSuccess: () => {
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["users"] });
-      onClose();
+      setEmailEnviado(res.data.data.email);
     },
     onError: (err) => setError(getApiError(err)),
   });
@@ -41,10 +41,28 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
     setError("");
   }
 
+  if (emailEnviado) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl text-center">
+          <div className="mb-3 flex justify-center">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-2xl">✉️</span>
+          </div>
+          <h2 className="mb-2 text-lg font-semibold text-gray-900">Email enviado!</h2>
+          <p className="mb-6 text-sm text-gray-500">
+            Um link para definir a senha foi enviado para <strong>{emailEnviado}</strong>.
+          </p>
+          <Button onClick={onClose} className="w-full">Fechar</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-        <h2 className="mb-5 text-lg font-semibold text-gray-900">Novo usuário</h2>
+        <h2 className="mb-1 text-lg font-semibold text-gray-900">Novo usuário</h2>
+        <p className="mb-5 text-sm text-gray-500">Um email será enviado para ele definir a senha.</p>
 
         <div className="flex flex-col gap-4">
           {me?.papel === "ADMIN" && (
@@ -62,7 +80,6 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
           )}
           <Input label="Nome" value={form.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Nome completo" required />
           <Input label="E-mail" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="email@exemplo.com" required />
-          <Input label="Senha temporária" type="password" value={form.senha} onChange={(e) => set("senha", e.target.value)} placeholder="Mínimo 8 caracteres" required />
           <Input label="Telefone (opcional)" value={form.telefone} onChange={(e) => set("telefone", e.target.value)} placeholder="(62) 99999-9999" />
         </div>
 
@@ -72,8 +89,8 @@ function CriarServidorModal({ onClose }: { onClose: () => void }) {
 
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button loading={mutation.isPending} disabled={!form.nome || !form.email || !form.senha} onClick={() => mutation.mutate()}>
-            Criar
+          <Button loading={mutation.isPending} disabled={!form.nome || !form.email} onClick={() => mutation.mutate()}>
+            Criar e enviar email
           </Button>
         </div>
       </div>

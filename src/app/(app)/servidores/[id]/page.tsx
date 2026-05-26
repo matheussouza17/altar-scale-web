@@ -23,7 +23,7 @@ import type {
   StatusDisponibilidade,
   User,
 } from "@/types";
-import { ArrowLeft, Trash2, Save, KeyRound } from "lucide-react";
+import { ArrowLeft, Trash2, Save, KeyRound, Mail } from "lucide-react";
 
 type SlotKey = string;
 
@@ -45,10 +45,8 @@ export default function ServidorPerfilPage() {
   const [editError, setEditError] = useState("");
   const [editSaved, setEditSaved] = useState(false);
 
-  const [showResetSenha, setShowResetSenha] = useState(false);
-  const [resetSenha, setResetSenha] = useState("");
-  const [resetError, setResetError] = useState("");
   const [resetSaved, setResetSaved] = useState(false);
+  const [resetError, setResetError] = useState("");
 
   const [mesAno, setMesAno] = useState(mesAtual);
   const [slots, setSlots] = useState<Record<SlotKey, StatusDisponibilidade>>({});
@@ -118,13 +116,11 @@ export default function ServidorPerfilPage() {
   });
 
   const resetSenhaMutation = useMutation({
-    mutationFn: () => api.patch(`/users/${id}/reset-senha`, { novaSenha: resetSenha }),
+    mutationFn: () => api.post(`/users/${id}/enviar-reset`),
     onSuccess: () => {
-      setResetSenha("");
-      setShowResetSenha(false);
       setResetSaved(true);
       setResetError("");
-      setTimeout(() => setResetSaved(false), 4000);
+      setTimeout(() => setResetSaved(false), 5000);
     },
     onError: (err) => setResetError(getApiError(err)),
   });
@@ -260,56 +256,25 @@ export default function ServidorPerfilPage() {
           <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Senha
           </h2>
-          {!showResetSenha && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => { setShowResetSenha(true); setResetError(""); setResetSenha(""); }}
-            >
-              <KeyRound className="h-4 w-4" />
-              Resetar senha
-            </Button>
-          )}
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={resetSenhaMutation.isPending}
+            onClick={() => resetSenhaMutation.mutate()}
+          >
+            <Mail className="h-4 w-4" />
+            Enviar link de redefinição
+          </Button>
         </div>
 
-        {resetSaved && !showResetSenha && (
+        {resetSaved && (
           <p className="mt-3 text-sm font-medium text-green-600">
-            Senha resetada. Comunique ao servidor.
+            Email enviado para {user.email}.
           </p>
         )}
 
-        {showResetSenha && (
-          <div className="mt-4 flex flex-col gap-4">
-            <Input
-              label="Nova senha temporária"
-              type="password"
-              value={resetSenha}
-              onChange={(e) => { setResetSenha(e.target.value); setResetError(""); }}
-              autoComplete="new-password"
-            />
-
-            {resetError && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{resetError}</p>
-            )}
-
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                loading={resetSenhaMutation.isPending}
-                disabled={resetSenha.length < 8}
-                onClick={() => resetSenhaMutation.mutate()}
-              >
-                Confirmar
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => { setShowResetSenha(false); setResetSenha(""); setResetError(""); }}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
+        {resetError && (
+          <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{resetError}</p>
         )}
       </section>
 

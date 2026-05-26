@@ -30,6 +30,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, senha: string) => Promise<void>;
+  loginWithToken: (token: string) => void;
   logout: () => void;
   isStaff: boolean;
 }
@@ -77,6 +78,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace(dest);
   }, [router]);
 
+  const loginWithToken = useCallback((token: string) => {
+    saveToken(token);
+    const payload = decodeToken(token)!;
+    setUser({
+      id: payload.sub,
+      email: payload.email,
+      nome: payload.nome,
+      telefone: payload.telefone,
+      papel: payload.papel,
+    });
+    const dest = payload.papel === "SERVIDOR" ? "/disponibilidade" : "/missas";
+    router.replace(dest);
+  }, [router]);
+
   const logout = useCallback(() => {
     removeToken();
     setUser(null);
@@ -87,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user?.papel === "COORDENADOR" || user?.papel === "ADMIN";
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isStaff }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithToken, logout, isStaff }}>
       {children}
     </AuthContext.Provider>
   );
